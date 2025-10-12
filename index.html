@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brilliant Technologies — Daily Report Dashboard</title>
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Tailwind Play CDN (for quick utilities) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <!-- html2pdf for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+
+  <style>
+    /* Enhanced visual theme: sky-blue accents, animated background, strong 3D shadows & hover states */
+    :root{
+      --bg-1: #041028;
+      --bg-2: #01203a;
+      --sky-50: #E6F8FF;
+      --sky-100: #CFF5FF;
+      --sky-300: #7DD3FC;
+      --sky-500: #38BDF8;   /* main skyblue accent */
+      --accent-strong: #2563eb;
+      --muted: #9fb4d8;
+      --text-on-dark: #E6EEF8;
+      --card-shadow: rgba(2,6,23,0.6);
+      --glass-1: rgba(255,255,255,0.06);
+      --glass-2: rgba(255,255,255,0.02);
+      --surface-text: #0b1220;
+    }
+
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      color:var(--text-on-dark);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      min-height:100vh;
+      background:
+        radial-gradient(700px 300px at 8% 12%, rgba(56,189,248,0.06), transparent 10%),
+        linear-gradient(120deg, var(--bg-1) 0%, var(--bg-2) 60%);
+      overflow-x:hidden;
+      position:relative;
+    }
+
+    /* animated soft sky overlay */
+    body::before{
+      content:'';
+      position:fixed;
+      inset: -20% -40% -20% -40%;
+      background: linear-gradient(60deg, rgba(56,189,248,0.06), rgba(124,58,237,0.03) 35%, rgba(96,165,250,0.04) 65%);
+      transform: rotate(-6deg);
+      filter: blur(60px) saturate(120%);
+      opacity:0.9;
+      animation: drift 18s linear infinite;
+      pointer-events:none;
+      z-index:0;
+    }
+    @keyframes drift{
+      0%{ transform: translateX(-3%) rotate(-6deg) scale(1); }
+      50%{ transform: translateX(3%) rotate(-5deg) scale(1.02); }
+      100%{ transform: translateX(-3%) rotate(-6deg) scale(1); }
+    }
+
+    /* main container elevated card */
+    .container{
+      position:relative;
+      z-index:1;
+      border-radius:1rem;
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0.00));
+      box-shadow:
+        0 34px 90px rgba(2,6,23,0.62),
+        0 12px 30px rgba(2,6,23,0.28) inset;
+    }
+
+    /* Glass panels with clear contrast and subtle 3D lift */
+    .glass{
+      position:relative;
+      z-index:2;
+      border-radius: 1rem;
+      padding: 1rem;
+      background: linear-gradient(180deg, var(--glass-1), var(--glass-2));
+      backdrop-filter: blur(8px) saturate(120%);
+      box-shadow:
+        0 28px 70px rgba(2,6,23,0.60),
+        0 6px 18px rgba(0,0,0,0.22) inset;
+      transition: transform .36s cubic-bezier(.2,.9,.3,1), box-shadow .36s, border-color .2s;
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+    .glass:hover{ transform: translateY(-8px) scale(1.004); box-shadow: 0 48px 120px rgba(2,6,23,0.65); }
+
+    /* Heading badge treatments */
+    .brand .badge{ background: #fff; color: #0b1220; box-shadow: 0 10px 30px rgba(56,189,248,0.10); }
+    .threeD .badge{ transition: transform .5s, box-shadow .5s; }
+    .threeD .badge:hover{ transform: translateZ(8px) rotateX(0deg); box-shadow: 0 28px 80px rgba(56,189,248,0.12); }
+
+    /* Task cards: deep 3D shadow + pop animation + skyblue accent on time */
+    .task-card{
+      position:relative;
+      border-radius: .85rem;
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      box-shadow:
+        0 18px 60px rgba(2,6,23,0.56),
+        0 6px 18px rgba(96,165,250,0.03) inset;
+      transition: transform .36s cubic-bezier(.2,.9,.3,1), box-shadow .36s, filter .28s;
+      overflow:visible;
+    }
+    .task-card.animate-pop{ animation: popIn .46s cubic-bezier(.2,.9,.3,1); }
+    .task-card:hover{
+      transform: translateY(-14px) rotateX(4deg) scale(1.012);
+      box-shadow: 0 60px 140px rgba(2,6,23,0.72);
+      filter: saturate(1.06) drop-shadow(0 16px 40px rgba(56,189,248,0.06));
+    }
+
+    .task-title{ color: var(--text-on-dark); font-weight:650; }
+    .task-note{ color: #c6d8ee; }
+
+    /* time display pill */
+    .task-time{
+      display:inline-block;
+      min-width:92px;
+      padding:.22rem .5rem;
+      border-radius:.5rem;
+      background: linear-gradient(90deg, rgba(125,211,252,0.12), rgba(56,189,248,0.06));
+      color: #eaf9ff;
+      font-weight:600;
+      box-shadow: 0 8px 30px rgba(56,189,248,0.10);
+      transition: transform .18s, box-shadow .18s;
+    }
+    .task-card:hover .task-time{ transform: translateY(-2px) scale(1.02); box-shadow: 0 20px 60px rgba(56,189,248,0.14); }
+
+    /* buttons: larger, more padding, visible colors & hover text contrast */
+    .btn{
+      padding: .7rem 1.05rem;
+      font-size: 1rem;
+      border-radius: .65rem;
+      transition: transform .18s, box-shadow .18s, color .12s, background-color .12s;
+      box-shadow: 0 12px 36px rgba(2,6,23,0.14);
+    }
+    .btn-sm{
+      padding: .45rem .75rem;
+      font-size: .95rem;
+      border-radius: .55rem;
+    }
+    .btn-toggle{ min-width:120px; padding:.6rem 1rem; font-weight:600; }
+
+    .btn-primary{
+      background: linear-gradient(90deg, var(--sky-300), var(--sky-500));
+      border: none;
+      color: #012033;
+      box-shadow: 0 14px 44px rgba(56,189,248,0.20);
+    }
+    .btn-primary:hover{
+      transform: translateY(-3px);
+      box-shadow: 0 30px 90px rgba(56,189,248,0.26);
+      color: #002234; /* stronger visible hover text */
+    }
+
+    .btn-outline-primary{
+      border-color: rgba(125,211,252,0.24);
+      color: var(--sky-300);
+      background: rgba(255,255,255,0.01);
+      box-shadow: 0 10px 30px rgba(56,189,248,0.06);
+    }
+    .btn-outline-primary:hover{
+      color:#012033;
+      background: linear-gradient(90deg, rgba(125,211,252,0.14), rgba(56,189,248,0.08));
+      transform: translateY(-3px);
+      box-shadow: 0 28px 76px rgba(56,189,248,0.14);
+    }
+
+    /* outline-danger / other variant hover contrast */
+    .btn-outline-danger:hover{ color: #6b0b12; background: rgba(244,63,94,0.06); transform: translateY(-2px); }
+    .btn-success:hover{ color:#052e10; transform: translateY(-2px); box-shadow: 0 22px 60px rgba(34,197,94,0.12); }
+
+    /* project list items with sky-blue glow on active/hover */
+    #projectList .list-group-item{
+      border-radius:.7rem;
+      margin-bottom:.45rem;
+      background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.00));
+      box-shadow: 0 14px 44px;
+      transition: transform .22s, box-shadow .22s, background-color .22s, color .12s;
+      cursor: pointer;
+      color: rgba(234,249,255,0.9);
+    }
+    #projectList .list-group-item:hover,
+    #projectList .list-group-item:focus{
+      transform: translateX(8px);
+      box-shadow: 0 34px 100px rgba(2,6,23,0.5);
+      color: #ffffff !important;
+    }
+    #projectList .list-group-item.active{
+      background: linear-gradient(90deg, rgba(125,211,252,0.12), rgba(99,102,241,0.06));
+      box-shadow: 0 36px 110px rgba(56,189,248,0.14);
+      border-left: 4px solid var(--sky-500);
+      color: #ffffff !important;
+    }
+
+    /* subitems buttons: pill look and hover lift */
+    #subitems .btn{
+      border-radius: .6rem;
+      padding: .5rem .75rem;
+      background: rgba(255,255,255,0.03);
+      color: rgba(234,249,255,0.95); /* readable on dark glass */
+      border: 1px solid rgba(125,211,252,0.06);
+      box-shadow: 0 10px 28px rgba(2,6,23,0.30);
+      font-weight: 600;
+      text-shadow: 0 1px 0 rgba(2,6,23,0.35);
+      transition: transform .18s, box-shadow .18s, background-color .18s, color .12s;
+      min-width: 110px;
+      text-align: center;
+    }
+
+    #subitems .btn:hover{
+      transform: translateY(-6px);
+      background: linear-gradient(90deg, rgba(125,211,252,0.18), rgba(56,189,248,0.10));
+      color: #012033; /* dark text on lighter pill for contrast */
+      box-shadow: 0 30px 80px rgba(56,189,248,0.14);
+    }
+
+    /* persistent visual for selected subitem */
+    #subitems .btn.active{
+      transform: translateY(-6px);
+      background: linear-gradient(90deg, rgba(125,211,252,0.22), rgba(56,189,248,0.14));
+      color: #ffffff;
+      box-shadow: 0 36px 110px rgba(56,189,248,0.16);
+      border: 1px solid rgba(56,189,248,0.18);
+    }
+
+    #subitems .btn:focus{
+      outline: none;
+      box-shadow: 0 0 0 6px rgba(56,189,248,0.10);
+    }
+    @media (max-width:576px){
+      #subitems .btn{ padding:.45rem .6rem; min-width:90px; font-size:.9rem; }
+    }
+
+    /* summary/time panels: stronger card shadow */
+    .pdf-wrap, .glass.p-4, .glass.p-3{
+      box-shadow: 0 26px 80px rgba(2,6,23,0.48);
+    }
+
+    /* report preview (paper) with subtle sky accent on headings */
+    .pdf-wrap{
+      background: #fff; color:var(--surface-text);
+      border-radius:10px; padding:22px;
+      box-shadow: 0 30px 90px rgba(2,6,23,0.08);
+    }
+    .pdf-wrap h3{ color: #033047; text-shadow: 0 2px 8px rgba(56,189,248,0.06); }
+
+    /* small components */
+    .btn-danger{ box-shadow: 0 10px 30px rgba(244,63,94,0.08); }
+    .btn-success{ box-shadow: 0 10px 30px rgba(34,197,94,0.08); }
+
+    /* accessible focus */
+    :focus{ outline:3px solid rgba(125,211,252,0.18); outline-offset:3px; }
+
+    /* responsive tweaks */
+    @media (max-width:992px){ .container{ padding:12px; } .glass{ padding:.85rem; } }
+    @media (max-width:576px){
+      .task-card{ padding:10px; box-shadow: 0 12px 36px rgba(2,6,23,0.44); }
+      .brand .badge{ padding: .5rem .9rem; }
+      #projectList .list-group-item{ margin-bottom:.3rem; }
+    }
+
+    /* small decorative shimmer on headings */
+    .brand{ position:relative; display:inline-block; }
+    .brand::after{
+      content:''; position:absolute; left:-30%; top:0; width:160%; height:100%;
+      background: linear-gradient(120deg, rgba(255,255,255,0.03), rgba(125,211,252,0.06), rgba(255,255,255,0.02));
+      transform: skewX(-14deg) translateX(-100%); opacity:.6; pointer-events:none;
+      transition: transform 1.2s ease-in-out;
+    }
+    .brand:hover::after{ transform: skewX(-14deg) translateX(6%); }
+
+    /* subtle helper to ensure the UI content sits above animated background */
+    .container, .glass, .task-card, .pdf-wrap{ position:relative; z-index:2; }
+
+    /* Force all button text to be white (including hover) for consistent visibility */
+    .btn,
+    .btn-primary,
+    .btn-outline-primary,
+    .btn-success,
+    .btn-danger,
+    .btn-toggle,
+    #subitems .btn {
+      color: #ffffff !important;
+    }
+
+    .btn:hover,
+    .btn-primary:hover,
+    .btn-outline-primary:hover,
+    .btn-success:hover,
+    .btn-danger:hover,
+    #subitems .btn:hover {
+      color: #ffffff !important;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body class="p-4">
+  <div class="container">
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center glass p-3">
+          <div>
+            <h1 class="brand text-3xl md:text-4xl threeD"><span class="badge bg-white text-dark px-3 py-2">Brilliant</span> <span class="text-slate-300">Technologies</span></h1>
+            <div class="text-muted small">Daily Task & Time Tracker — Attractive Dashboard</div>
+          </div>
+          <div class="text-end">
+            <div class="threeD floaty">
+              <span class="badge bg-white text-dark">Automated Time Counting</span>
+            </div>
+            <div class="small text-muted mt-2">Work hours: 09:00 — 18:30 &middot; Lunch: 13:00 — 14:00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="glass p-4">
+          <h4 class="mb-3">Employee Details</h4>
+          <div class="mb-2">
+            <label class="form-label">Employee name</label>
+            <input id="empName" class="form-control" placeholder="Enter full name">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Date</label>
+            <input id="reportDate" type="date" class="form-control">
+          </div>
+
+
+          <div class="form-check form-switch my-3">
+            <input class="form-check-input" type="checkbox" id="lunchToggle" checked>
+            <label class="form-check-label" for="lunchToggle">Auto lunch break (13:00 - 14:00)</label>
+          </div>
+
+          <div class="mt-3 d-grid">
+            <button id="addTaskBtn" class="btn btn-primary">+ Add custom task</button>
+            <button id="generatePdfBtn" class="btn btn-success mt-2">Download PDF report</button>
+          </div>
+
+          <small class="text-muted d-block mt-3">Tip: Toggle tasks ON to start counting. Multiple tasks can be active simultaneously — time will accumulate.</small>
+        </div>
+
+        <div class="glass p-4 mt-4">
+          <h5>Summary</h5>
+          <div class="d-flex justify-content-between mt-2">
+            <div>Total time</div>
+            <div id="totalTime">00:00:00</div>
+          </div>
+          <div class="d-flex justify-content-between mt-2">
+            <div>Active tasks</div>
+            <div id="activeCount">0</div>
+          </div>
+          <div class="mt-3">
+            <label class="form-label">Working window</label>
+            <input id="workWindow" class="form-control" value="09:00 - 18:30">
+          </div>
+        </div>
+
+      </div>
+
+      <div class="col-lg-8">
+
+        <!-- Projects panel: click title to open subitems, then Start your task -->
+        <div class="glass p-3 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Projects & Subitems</h4>
+            <div class="form-check form-switch ms-3">
+              <input class="form-check-input" type="checkbox" id="singleActive" checked>
+              <label class="form-check-label small" for="singleActive">Single active task mode</label>
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-4">
+              <ul id="projectList" class="list-group" style="max-height:320px;overflow:auto">
+                <!-- project titles rendered here -->
+              </ul>
+            </div>
+            <div class="col-md-8">
+              <div id="subitemsWrap">
+                <div class="small text-muted mb-2">Select a project title to see subitems</div>
+                <div id="subitems" class="d-flex flex-wrap gap-2">
+                  <!-- subitems buttons here -->
+                </div>
+                <div class="mt-3 d-flex gap-2">
+                  <button id="startSelectedBtn" class="btn btn-primary">Start selected task</button>
+                  <button id="stopAllBtn" class="btn btn-outline-danger">Stop all</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass p-3">
+          <h4 class="mb-3">Tasks</h4>
+          <div id="tasksContainer" class="row gy-3">
+            <!-- Task cards injected here -->
+          </div>
+        </div>
+
+        <div class="glass p-3 mt-4">
+          <h4 class="mb-3">Final report preview</h4>
+          <div id="reportPreview" class="pdf-wrap">
+            <div class="d-flex justify-content-between mb-3">
+              <div>
+                <h3>Brilliant Technologies</h3>
+                <div id="rpName">Name: —</div>
+                <div id="rpDate">Date: —</div>
+              </div>
+              <div class="text-end">
+                <div id="rpTotal">Total Time: 00:00:00</div>
+                <div id="rpActive">Active Tasks: 0</div>
+              </div>
+            </div>
+
+            <table class="table table-sm report-table">
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th>Enabled</th>
+                  <th>Time (hh:mm:ss)</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody id="reportRows">
+                <!-- rows -->
+              </tbody>
+            </table>
+
+            <div class="mt-2 text-end"><small class="text-muted">Developed By Murthu</small></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Template for task card -->
+  <template id="taskTemplate">
+    <div class="col-md-6">
+      <div class="card task-card p-3">
+        <div class="d-flex justify-content-between align-items-start">
+          <div style="flex:1 1 auto;">
+            <h5 class="task-title mb-1">Task name</h5>
+            <!-- note field removed as requested -->
+          </div>
+          <div class="text-end" style="min-width:120px;">
+            <div class="mb-2">
+              <button class="btn btn-success btn-sm btn-toggle startStop" aria-label="Start/Stop task">Start</button>
+            </div>
+            <div class="small text-muted">Time: <span class="task-time">00:00:00</span></div>
+          </div>
+        </div>
+        <div class="mt-3 d-flex gap-2 justify-content-end">
+          <button class="btn btn-danger btn-sm btn-remove">Remove</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+<script>
+  // App state
+  const tasks = []; // {id, name, baseSeconds, runningStart (ms)|null, sessions:[{start,end}], note, project}
+  let interval = null;
+  // Projects data (titles and subitems) - use the lists you provided
+  const projects = [
+    { title: 'BrilliantTechnologies', items: [ 'AI IMAGE EDITING','AI IMAGE DESIGNING','BACKLINKS','BLOG WRITING','BUSINESS DEVELOPMENT','CONTENT REASEARCH','COVER DESIGNING','CREATING BLOGS','EMAIL MARKETING','FACEBOOK','GOOGLE ADS','GROUP DISCUSSION','INSTAGRAM','INTERVIEWS','KNOWLEDGE SHARING SESSION','LINKEDIN ADS','LINKEDIN','LOCAL SEO(GMB)','LOGO DESIGNIING','MANAGEMENT MEETING','Marketing','Meta ads','on page SEO','OTHER DESIGNS','PAYMENT GATEWAY SETUP','POSTER DESIGNING','POSTING','PPT DESIGNING','PRODUCT LISTING','PROGRAMMING','PROJECT MANAGEMENT','REPORT UPDATING','SHOOTING VIDEOS','SOCIAL MEDIA','SOCIAL MEDIA CHECKING','TEAM MEETING','VACCATION','VIDEO EDITING','VIDEO SHOOT','WATI','WEB CODING CUSTOMIZING','WEB DEVELOPEMENT','WEB INTEGRATION','WEB MODIFICATION','YOUTUBE SEO' ] },
+    { title: 'Content approval system', items: ['BUSINESS DEVELOPMENT','DESIGN','Marketing','PAYMENT GATEWAY SETUP','PRODUCT LISTING','programming','project management','WEB CODING CUSTOMIZING','WEB DEVELOPEMENT','WEB INTEGRATION','WEB MODIFICATION'] },
+    { title: 'Lampros Digital', items: ['BUSINESS DEVELOPMENT','DESIGN','Marketing','PAYMENT GATEWAY SETUP','PRODUCT LISTING','programming','project management','WEB CODING CUSTOMIZING','WEB DEVELOPEMENT','WEB INTEGRATION','WEB MODIFICATION'] },
+    { title: 'Rupa Reddy Nampally (Personal Website)', items: ['BUSINESS DEVELOPMENT','DESIGN','Marketing','PAYMENT GATEWAY SETUP','PRODUCT LISTING','programming','project management','WEB CODING CUSTOMIZING','WEB DEVELOPEMENT','WEB INTEGRATION','WEB MODIFICATION'] },
+    { title: 'Sevajyothi Foundation', items: ['BUSINESS DEVELOPMENT','DESIGN','Marketing','PAYMENT GATEWAY SETUP','PRODUCT LISTING','programming','project management','WEB CODING CUSTOMIZING','WEB DEVELOPEMENT','WEB INTEGRATION','WEB MODIFICATION'] },
+    { title: 'Tally Cloud', items: ['BUSINESS DEVELOPMENT','DESIGN','Marketing','PAYMENT GATEWAY SETUP','PRODUCT LISTING','programming','project management','WEB CODING CUSTOMIZING','WEB DEVELOPEMENT','WEB INTEGRATION','WEB MODIFICATION'] },
+    { title: 'Tally Solution India', items: ['BUSINESS DEVELOPMENT','DESIGN','Marketing','PAYMENT GATEWAY SETUP','PRODUCT LISTING','programming','project management','WEB CODING CUSTOMIZING','WEB DEVELOPEMENT','WEB INTEGRATION','WEB MODIFICATION'] },
+    { title: 'CellHealth', items: ['BUSINESS DEVELOPMENT','DESIGN','Marketing','PAYMENT GATEWAY SETUP','PRODUCT LISTING','programming','project management','WEB CODING CUSTOMIZING','WEB DEVELOPEMENT','WEB INTEGRATION','WEB MODIFICATION'] },
+    { title: 'Cell Health Aqua', items: ['BUSINESS DEVELOPMENT','DESIGN','Marketing','PAYMENT GATEWAY SETUP','PRODUCT LISTING','programming','project management','WEB CODING CUSTOMIZING','WEB DEVELOPEMENT','WEB INTEGRATION','WEB MODIFICATION'] },
+    { title: 'Naturopathy Cell Health', items: ['BUSINESS DEVELOPMENT','DESIGN','Marketing','PAYMENT GATEWAY SETUP','PRODUCT LISTING','programming','project management','WEB CODING CUSTOMIZING','WEB DEVELOPEMENT','WEB INTEGRATION','WEB MODIFICATION'] },
+    { title: 'Ramakrishna Healthline', items: ['BUSINESS DEVELOPMENT','DESIGN','Marketing','PAYMENT GATEWAY SETUP','PRODUCT LISTING','programming','project management','WEB CODING CUSTOMIZING','WEB DEVELOPEMENT','WEB INTEGRATION','WEB MODIFICATION'] }
+  ];
+  let selectedProject = null;
+  let selectedSubitem = null;
+  const singleActiveCheckbox = () => document.getElementById('singleActive');
+
+  // Elements
+  const tasksContainer = document.getElementById('tasksContainer');
+  const projectList = document.getElementById('projectList');
+  const subitemsEl = document.getElementById('subitems');
+  const startSelectedBtn = document.getElementById('startSelectedBtn');
+  const stopAllBtn = document.getElementById('stopAllBtn');
+  const addTaskBtn = document.getElementById('addTaskBtn');
+  const totalTimeEl = document.getElementById('totalTime');
+  const activeCountEl = document.getElementById('activeCount');
+  const reportDate = document.getElementById('reportDate');
+  const empName = document.getElementById('empName');
+  const lunchToggle = document.getElementById('lunchToggle');
+  const reportRows = document.getElementById('reportRows');
+  const rpName = document.getElementById('rpName');
+  const rpDate = document.getElementById('rpDate');
+  const rpTotal = document.getElementById('rpTotal');
+  const rpActive = document.getElementById('rpActive');
+  const generatePdfBtn = document.getElementById('generatePdfBtn');
+  // removed Assigned project select per request
+
+  // initialize date to today
+  reportDate.value = new Date().toISOString().slice(0,10);
+
+  // --- missing UI & timing helpers (added/ensures startSelectedBtn works) ---
+  function fmtTime(s){
+    s = Math.max(0, Math.floor(s));
+    const h = Math.floor(s/3600).toString().padStart(2,'0');
+    const m = Math.floor((s%3600)/60).toString().padStart(2,'0');
+    const sec = (s%60).toString().padStart(2,'0');
+    return `${h}:${m}:${sec}`;
+  }
+
+  function computeDisplayedSeconds(t){
+    let total = (t.baseSeconds||0);
+    if(t.runningStart) total += Math.floor((Date.now() - t.runningStart)/1000);
+    return total;
+  }
+
+  // render tasks UI (uses #taskTemplate)
+  function renderTasks(){
+    // Group tasks by project and render a project header + tasks under it.
+    tasksContainer.innerHTML = '';
+    const byProject = {};
+    for(const t of tasks){
+      const key = t.project || '—';
+      byProject[key] = byProject[key] || [];
+      byProject[key].push(t);
+    }
+
+    // create ordered list of project keys, put currently selected project first (if present)
+    const keys = Object.keys(byProject);
+    if(selectedProject && keys.includes(selectedProject.title)){
+      keys.splice(keys.indexOf(selectedProject.title), 1);
+      keys.unshift(selectedProject.title);
+    }
+    // fallback label when there are no tasks
+    const projectsOrder = keys.length ? keys : ['My Tasks'];
+
+    for(const proj of projectsOrder){
+      const group = byProject[proj] || [];
+      // Project header (always shown when there are tasks for it)
+      const headerCol = document.createElement('div');
+      headerCol.className = 'col-12 mb-2';
+      headerCol.innerHTML = `<div class="p-2"><strong class="text-white">${proj}</strong></div>`;
+      tasksContainer.appendChild(headerCol);
+
+      // tasks in this project
+      for(const t of group){
+        const tpl = document.getElementById('taskTemplate').content.cloneNode(true);
+        tpl.querySelector('.task-title').textContent = t.name;
+        tpl.querySelector('.task-time').textContent = fmtTime(computeDisplayedSeconds(t));
+        const startBtn = tpl.querySelector('.startStop');
+        const running = !!t.runningStart;
+        startBtn.textContent = running ? 'Stop' : 'Start';
+        startBtn.classList.toggle('btn-success', !running);
+        startBtn.classList.toggle('btn-danger', running);
+
+        // remove button handler
+        tpl.querySelector('.btn-remove').addEventListener('click', ()=>{
+          const idx = tasks.findIndex(x=>x.id===t.id);
+          if(idx>=0){ tasks.splice(idx,1); renderTasks(); updateSummary(); }
+        });
+
+        startBtn.addEventListener('click', ()=>{
+          if(!t.runningStart) startTaskObj(t); else stopTaskObj(t);
+        });
+
+        // append under project as a column
+        tasksContainer.appendChild(tpl);
+      }
+    }
+  }
+  
+  function updateSummary(){
+    const total = tasks.reduce((s,t)=> s + computeDisplayedSeconds(t), 0);
+    const active = tasks.filter(t=>!!t.runningStart).length;
+    totalTimeEl.textContent = fmtTime(total);
+    activeCountEl.textContent = active;
+    updateReportPreview();
+  }
+  
+  function updateReportPreview(){
+    // Header info
+    rpName.textContent = 'Name: ' + (empName.value || '—');
+    rpDate.textContent = 'Date: ' + (reportDate.value || '—');
+    const total = tasks.reduce((s,t)=> s + computeDisplayedSeconds(t), 0);
+    rpTotal.textContent = 'Total Time: ' + fmtTime(total);
+    rpActive.textContent = 'Active Tasks: ' + tasks.filter(t=>!!t.runningStart).length;
+
+    // Group tasks by project for report output (project title row + subitem rows)
+    reportRows.innerHTML = '';
+    const byProject = {};
+    for(const t of tasks){
+      const key = t.project || 'My Tasks';
+      byProject[key] = byProject[key] || [];
+      byProject[key].push(t);
+    }
+
+    const projectKeys = Object.keys(byProject);
+    if(projectKeys.length === 0){
+      // no tasks
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="4" class="text-muted">No tasks added</td>`;
+      reportRows.appendChild(tr);
+      return;
+    }
+
+    for(const proj of projectKeys){
+      // Project header row (spans full table)
+      const hdr = document.createElement('tr');
+      hdr.innerHTML = `<td colspan="4" class="bg-light text-dark"><strong>Project: ${proj}</strong></td>`;
+      reportRows.appendChild(hdr);
+
+      // Subitems under this project
+      for(const t of byProject[proj]){
+        const tr = document.createElement('tr');
+        const timeStr = fmtTime(computeDisplayedSeconds(t));
+        const running = !!t.runningStart;
+        let sessionsHtml = '';
+        if(t.sessions && t.sessions.length){
+          sessionsHtml = '<div class="small text-muted">';
+          t.sessions.forEach(s=>{
+            const sStart = s.start ? new Date(s.start).toLocaleTimeString() : '—';
+            const sEnd = s.end ? new Date(s.end).toLocaleTimeString() : (running ? 'running' : '—');
+            sessionsHtml += `${sStart} → ${sEnd}<br>`;
+          });
+          sessionsHtml += '</div>';
+        }
+        tr.innerHTML = `<td>${t.name}${sessionsHtml}</td><td>${running? 'Yes':'No'}</td><td>${timeStr}</td><td>${t.note||''}</td>`;
+        reportRows.appendChild(tr);
+      }
+    }
+  }
+
+  function renderTasksUItimes(){ renderTasks(); }
+
+  function startInterval(){
+    if(interval) return;
+    interval = setInterval(()=>{ renderTasksUItimes(); updateSummary(); },1000);
+  }
+
+  // addTask helper (used by startSelectedBtn and Add custom task)
+  function addTask(name='General Work', project){
+    const id = Math.random().toString(36).slice(2,9);
+    tasks.push({id, name, baseSeconds:0, runningStart:null, sessions:[], note:'', project: project||'—'});
+    renderTasks(); updateSummary();
+    return tasks.find(t => t.id === id);
+  }
+
+  // --- Project UI rendering & behavior ---
+  function renderProjectList(){
+    projectList.innerHTML = '';
+    projects.forEach((p, idx) => {
+      const li = document.createElement('li');
+      li.className = 'list-group-item list-group-item-action';
+      li.textContent = p.title;
+      li.dataset.index = idx;
+      li.addEventListener('click', ()=> {
+        selectedProject = projects[idx];
+        selectedSubitem = null;
+        renderSubitems();
+        // highlight selection
+        Array.from(projectList.children).forEach(n=> n.classList.remove('active'));
+        li.classList.add('active');
+      });
+      projectList.appendChild(li);
+    });
+    // auto-select first project if none selected (so header + subitems show immediately)
+    if(!selectedProject && projects.length){
+      selectedProject = projects[0];
+      if(projectList.children[0]) projectList.children[0].classList.add('active');
+    }
+  }
+
+  function renderSubitems(){
+    subitemsEl.innerHTML = '';
+    if(!selectedProject){
+      subitemsEl.innerHTML = '<div class="text-muted">No project selected</div>';
+      return;
+    }
+    selectedProject.items.forEach(it=>{
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-sm btn-outline-primary';
+      btn.textContent = it;
+      btn.addEventListener('click', ()=>{
+        selectedSubitem = it;
+        // mark as selected visually
+        Array.from(subitemsEl.children).forEach(n=> n.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      subitemsEl.appendChild(btn);
+    });
+  }
+
+  // find existing task by name+project
+  function findTaskByNameProject(name, project){
+    return tasks.find(t => t.name === name && (t.project||'—') === (project||'—'));
+  }
+
+  // programmatic start/stop helpers (shared by menu and buttons)
+  function startTaskObj(t){
+    if(singleActiveCheckbox() && singleActiveCheckbox().checked){
+      // stop others
+      tasks.forEach(o => { if(o.runningStart && o.id !== t.id) stopTaskObj(o); });
+    }
+    if(!t.runningStart){
+      t.runningStart = Date.now();
+      t.sessions = t.sessions || [];
+      t.sessions.push({ start: new Date(t.runningStart).toISOString(), end: null });
+      renderTasks();
+      updateSummary();
+    }
+  }
+
+  function stopTaskObj(t){
+    if(t.runningStart){
+      const now = Date.now();
+      const elapsed = Math.floor((now - t.runningStart)/1000);
+      t.baseSeconds = (t.baseSeconds||0) + elapsed;
+      t.runningStart = null;
+      const last = t.sessions && t.sessions[t.sessions.length-1];
+      if(last && !last.end) last.end = new Date(now).toISOString();
+      renderTasks();
+      updateSummary();
+    }
+  }
+
+  // called when "Start selected task" clicked
+  startSelectedBtn.addEventListener('click', ()=>{
+    if(!selectedProject || !selectedSubitem){
+      alert('Select a project title and a subitem first.');
+      return;
+    }
+    // ensure task exists and start it immediately
+    let task = findTaskByNameProject(selectedSubitem, selectedProject.title);
+    if(!task){
+      task = addTask(selectedSubitem, selectedProject.title);
+    }
+    if(task) startTaskObj(task);
+  });
+  
+  stopAllBtn.addEventListener('click', ()=>{
+    tasks.forEach(t => stopTaskObj(t));
+  });
+  
+  // Create UI: when clicking addTaskBtn, prompt for task name
+  addTaskBtn.addEventListener('click', ()=>{
+    const name = prompt('Enter task name (e.g. Development, Meeting, Code Review):','Development');
+    if(name){
+      // if a project is selected, assign new custom task to it
+      const proj = selectedProject ? selectedProject.title : undefined;
+      addTask(name.trim(), proj);
+    }
+  });
+  
+  // initial render of project menu
+  renderProjectList();
+  renderSubitems();
+  // example: add sample Project + Subitem so dashboard & final report show "BrilliantTechnologies" -> "WEB MODIFICATION"
+  addTask('WEB MODIFICATION','BrilliantTechnologies');
+  // init a few personal tasks as before
+  ['Development','Meeting','Code Review','Testing'].forEach(n=> addTask(n, '—'));
+
+  // start background interval
+  startInterval();
+
+  // Pdf generation
+  generatePdfBtn.addEventListener('click', ()=>{
+    // update preview data before export
+    updateReportPreview();
+    const opt = {
+      margin:       0.4,
+      filename:     `${(empName.value||'Employee')}_Brilliant_Technologies_Report_${reportDate.value||new Date().toISOString().slice(0,10)}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+    const element = document.getElementById('reportPreview');
+    html2pdf().set(opt).from(element).save();
+  });
+
+  // ensure interval keeps running when page visible
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') startInterval(); });
+
+  // auto-save to localStorage periodically (so user doesnt lose counts)
+  setInterval(()=>{
+    const snapshot = {
+      tasks: tasks.map(t=>({
+        id: t.id, name: t.name, baseSeconds: t.baseSeconds||0, runningStart: t.runningStart||null, sessions: t.sessions||[], note: t.note||'', project: t.project||'—'
+      })),
+      date: reportDate.value, name: empName.value
+    };
+    localStorage.setItem('brilliant_report_snapshot', JSON.stringify(snapshot));
+  },5000);
+
+  // try load snapshot
+  window.addEventListener('load', ()=>{
+    try{
+      const ss = JSON.parse(localStorage.getItem('brilliant_report_snapshot'));
+      if(ss && ss.tasks){
+        // merge tasks (simple)
+        tasks.length=0; ss.tasks.forEach(t=>{
+          const parsed = {
+            id: t.id || Math.random().toString(36).slice(2,9),
+            name: t.name || 'Task',
+            baseSeconds: t.baseSeconds || 0,
+            runningStart: t.runningStart ? Date.parse(t.runningStart) : null,
+            sessions: t.sessions || [],
+            note: t.note || '',
+            project: t.project || '—'
+          };
+          tasks.push(parsed);
+        });
+        if(ss.date) reportDate.value = ss.date;
+        if(ss.name) empName.value = ss.name;
+        renderTasks(); updateSummary();
+      }
+    }catch(e){}
+  });
+
+  // periodically update UI time labels (every second)
+  setInterval(()=>{ renderTasksUItimes(); },1000);
+  
+
+</script>
+
+</body>
+</html>
+
