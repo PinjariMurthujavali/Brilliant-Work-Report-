@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100" class="site-icon">
+  <circle cx="50" cy="50" r="40" fill="url(#gradient)" class="icon-background"/>
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-size="24" fill="#fff" class="icon-text">Logo</text>
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:skyblue;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:yellow;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <style>
+    .site-icon {
+      animation: pulse 2s infinite;
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
+    }
+    .icon-background {
+      transition: transform 0.3s ease;
+    }
+    .site-icon:hover .icon-background {
+      transform: scale(1.1);
+    }
+    .icon-text {
+      transition: opacity 0.3s ease;
+    }
+    .site-icon:hover .icon-text {
+      opacity: 0.8;
+    }
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+  </style>
+</svg>
