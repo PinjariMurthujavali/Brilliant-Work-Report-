@@ -253,6 +253,16 @@
     }
     .pdf-wrap h3{ color: #033047; text-shadow: 0 2px 8px rgba(56,189,248,0.06); }
 
+    /* Ensure final report preview exports/prints with pure black text */
+    .pdf-wrap, 
+    .pdf-wrap * {
+      color: #000 !important;
+    }
+    /* Override any .text-muted inside the preview so it becomes black too */
+    .pdf-wrap .text-muted {
+      color: #000 !important;
+    }
+
     /* small components */
     .btn-danger{ box-shadow: 0 10px 30px rgba(244,63,94,0.08); }
     .btn-success{ box-shadow: 0 10px 30px rgba(34,197,94,0.08); }
