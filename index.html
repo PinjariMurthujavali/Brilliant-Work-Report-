@@ -9,9 +9,9 @@
   <!-- Tailwind Play CDN (for quick utilities) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/li/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <!-- html2pdf for PDF export -->
-  <script src="https://cdnjs.cloudflare.com/ajax/li/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
 
   <style>
     /* Enhanced visual theme: sky-blue accents, animated background, strong 3D shadows & hover states */
@@ -271,7 +271,7 @@
     /* small decorative shimmer on headings */
     .brand{ position:relative; display:inline-block; }
     .brand::after{
-      content:''; position:aolute; left:-30%; top:0; width:160%; height:100%;
+      content:''; position:absolute; left:-30%; top:0; width:160%; height:100%;
       background: linear-gradient(120deg, rgba(255,255,255,0.03), rgba(125,211,252,0.06), rgba(255,255,255,0.02));
       transform: skewX(-14deg) translateX(-100%); opacity:.6; pointer-events:none;
       transition: transform 1.2s ease-in-out;
@@ -301,7 +301,9 @@
       color: #ffffff !important;
       text-decoration: none;
     }
-
+    .text-muted {
+      color:#ffffff !important;
+    }
   </style>
 </head>
 <body class="p-4">
@@ -815,7 +817,8 @@
             id: t.id || Math.random().toString(36).slice(2,9),
             name: t.name || 'Task',
             baseSeconds: t.baseSeconds || 0,
-            runningStart: t.runningStart ? Date.parse(t.runningStart) : null,
+            // preserve numeric timestamps, but handle serialized strings too
+            runningStart: t.runningStart ? (typeof t.runningStart === 'number' ? t.runningStart : (isNaN(Date.parse(t.runningStart)) ? null : Date.parse(t.runningStart))) : null,
             sessions: t.sessions || [],
             note: t.note || '',
             project: t.project || '—'
