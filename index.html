@@ -415,6 +415,18 @@
       text-align: center;
       margin: 40px 0 20px;
     }
+
+    #currentTime {
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: #2563eb;
+    padding: 0.5rem 1rem;
+}
+#b {
+    font-weight: bold;
+    font-size: 1.5em;
+    color: #ffffff;
+}
   
   </style>  
 </head>  
@@ -458,6 +470,16 @@
               <div class="threeD floaty">  
                 <span class="badge bg-white text-dark">Time Tracker</span>  
               </div>  
+              <!-- Username Display -->
+              <div id="usernameDisplay" class="mb-2" style="font-size: 2rem; font-weight: bold; color: #ffffff;"></div>
+              <!-- Attractive Logout Button -->
+              <button id="logoutBtn" class="btn btn-outline-light ms-3" style="font-size:1rem; font-weight:bold; border-radius:0.5rem;">Logout</button>
+              
+              <label class="form-label" id="b">Employee name</label>  
+              <div class="input-group">
+                  <input id="empName" class="form-control" placeholder="Enter full name" readonly>
+                  <span id="currentTime" class="input-group-text">--:--:--</span>
+              </div>
               <div class="small text-muted mt-2">Work hours: 09:00 — 18:30 &middot; Lunch: 13:00 — 14:00</div>  
             </div>  
           </div>  
@@ -468,9 +490,7 @@
         <div class="col-lg-4">  
           <div class="glass p-4">  
             <h4 class="mb-3">Employee Details</h4>  
-            <div class="mb-2">  
-              <label class="form-label">Employee name</label>  
-              <input id="empName" class="form-control" placeholder="Enter full name" readonly>  
+            <div class="mb-2">    
             </div>  
             <div class="mb-2">  
               <label class="form-label">Date</label>  
@@ -502,6 +522,7 @@
               <div id="activeCount">0</div>  
             </div>  
             <div class="mt-3">  
+                                <div id="rpName">Name: —</div> 
               <label class="form-label">Working window</label>  
               <input id="workWindow" class="form-control" value="09:00 - 18:30">  
             </div>  
@@ -554,8 +575,7 @@
             <div id="reportPreview" class="pdf-wrap">  
               <div class="d-flex justify-content-between mb-3">  
                 <div>  
-                  <h3>Brilliant Technologies</h3>  
-                  <div id="rpName">Name: —</div>  
+                  <h3>Brilliant Technologies</h3>   
                   <div id="rpDate">Date: —</div>  
                 </div>  
                 <div class="text-end">  
@@ -617,7 +637,7 @@
   
     // Predefined user accounts (username: password)  
     const users = {  
-        "Murthu": "Murthu@000991",  
+        "Murthu": "Murthu@123",  
         "Shivakanth": "Shivakanth@0991",  
         "Das": "Das@098877",  
         "Vinay": "Vinay@99111",  
@@ -635,14 +655,19 @@
         const password = passwordInput.value;  
   
         if (users[username] === password) {  
-            loggedInUser = username; // Store username  
-            showLoader();  
+            loggedInUser = username;  
+            // Persist logged-in state
+            localStorage.setItem('loggedInUser', loggedInUser);
+            showLoader();
             setTimeout(() => {  
                 hideLoader();  
                 showMainContent();  
-                document.getElementById('empName').value = loggedInUser; // Display username  
-                initializeApp(); // Initialize the dashboard  
-            }, 1500); // Simulate loading  
+                document.getElementById('empName').value = loggedInUser;  
+                document.getElementById('usernameDisplay').textContent = loggedInUser;
+                updateCurrentTime(); // Set time immediately
+                setInterval(updateCurrentTime, 1000); // Update time every second
+                initializeApp();  
+            }, 1500);  
         } else {  
             alert("Invalid credentials!");  
         }  
@@ -1036,6 +1061,47 @@
   // periodically update UI time labels (every second)  
   setInterval(()=>{ renderTasksUItimes(); },1000);  
   
+  function updateCurrentTime(){
+    const currentTimeEl = document.getElementById('currentTime');
+    currentTimeEl.textContent = new Date().toLocaleTimeString();
+}
+
+// Add this function below the existing functions in your <script> block.
+function logout() {
+    if (confirm("Are you sure you want to log out?")) {
+        loggedInUser = null;
+        // Remove persisted login state
+        localStorage.removeItem('loggedInUser');
+        // Hide main content and show login container
+        document.getElementById('main-content').style.display = 'none';
+        document.getElementById('login-container').style.display = 'flex';
+        // Optionally, clear any fields for a fresh login
+        document.getElementById('empName').value = '';
+    }
+}
+
+// Add an event listener for the logout button
+document.addEventListener('DOMContentLoaded', () => {
+    const logoutBtn = document.getElementById('logoutBtn');
+    if(logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
+});
+
+// --- On window load, auto-login if a logged-in user exists ---
+window.addEventListener('load', () => {
+    // Check for persisted login state
+    const storedUser = localStorage.getItem('loggedInUser');
+    if (storedUser) {
+        loggedInUser = storedUser;
+        showMainContent();
+        document.getElementById('empName').value = loggedInUser;
+        document.getElementById('usernameDisplay').textContent = loggedInUser;
+        updateCurrentTime(); // Set current time immediately
+        setInterval(updateCurrentTime, 1000); // Update current time every second
+        initializeApp();
+    }
+});
   
 </script>  
   
